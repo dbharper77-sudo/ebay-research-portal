@@ -662,7 +662,7 @@ async function researchItem(item, index, condition) {
 
   const conditionNote = condition !== 'New' ? condition : 'New';
 
-  const prompt = 'UK eBay reseller task. Product ASIN/EAN: ' + item.id + '. Condition: ' + conditionNote + '. Notes: ' + (item.note || 'none') + '. Search Amazon.co.uk and eBay.co.uk sold listings for this product, then return ONLY a JSON object with these exact keys, no markdown, no explanation: {"productName":"string","amazonPrice":"£X.XX","amazonNote":"string","ebaySoldLow":"£X.XX","ebaySoldHigh":"£X.XX","ebayNote":"string","suggestPrice":"X.XX","rationale":"string","title":"eBay title under 80 chars with brand model key specs","description":"3 sentence eBay listing description"}';
+  const prompt = 'UK eBay reseller task. Product ASIN/EAN: ' + item.id + '. Condition: ' + conditionNote + '. Notes: ' + (item.note || 'none') + '. First fetch https://www.amazon.co.uk/dp/' + item.id + ' to identify the exact product. Then search eBay UK sold listings for that exact product name. Then return ONLY a JSON object with these exact keys, no markdown, no explanation: {"productName":"string","amazonPrice":"£X.XX","amazonNote":"string","ebaySoldLow":"£X.XX","ebaySoldHigh":"£X.XX","ebayNote":"string","suggestPrice":"X.XX","rationale":"string","title":"eBay title under 80 chars with brand model key specs","description":"3 sentence eBay listing description"}';
 
     const apiKey = localStorage.getItem('rp_apikey');
   if (!apiKey) {
