@@ -480,6 +480,15 @@ tr:hover td { background: rgba(255,255,255,0.015); }
         <input type="text" id="sessionName" placeholder="e.g. Amazon returns batch 3">
       </div>
 
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px">
+        <label style="margin-bottom:6px">Anthropic API Key <span id="keyStatus" style="color:var(--green);font-size:0.65rem;font-weight:400"></span></label>
+        <div style="display:flex;gap:6px;margin-bottom:6px">
+          <input type="password" id="apiKeyInput" placeholder="sk-ant-..." style="flex:1;font-size:0.72rem">
+          <button class="btn-small green" style="padding:6px 10px" onclick="saveKey()">Save</button>
+        </div>
+        <div style="font-size:0.63rem;color:var(--muted);line-height:1.5">Stored in your browser only. Get yours at <a href="https://console.anthropic.com" target="_blank" style="color:var(--accent)">console.anthropic.com</a></div>
+      </div>
+
       <div id="parsedPreview" class="parsed-preview" style="display:none"></div>
 
       <button class="btn btn-run" id="runBtn" onclick="startResearch()">▶ Run Research</button>
@@ -679,10 +688,24 @@ Return ONLY valid JSON, no markdown:
   "description": "full eBay listing description"
 }`;
 
+  const apiKey = localStorage.getItem('rp_apikey');
+  if (!apiKey) {
+    results[item.id] = { status: 'error', error: 'No API key' };
+    const badge2 = document.getElementById('badge-' + index);
+    badge2.className = 'badge badge-err';
+    badge2.textContent = 'NO KEY';
+    return;
+  }
+
   try {
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 1000,
@@ -852,7 +875,23 @@ function exportCSV() {
   a.click();
 }
 
+function saveKey() {
+  const k = document.getElementById('apiKeyInput').value.trim();
+  if (!k) return;
+  localStorage.setItem('rp_apikey', k);
+  document.getElementById('apiKeyInput').value = '';
+  checkKey();
+}
+
+function checkKey() {
+  const k = localStorage.getItem('rp_apikey');
+  const el = document.getElementById('keyStatus');
+  if (k) { el.textContent = '✓ Saved'; }
+  else { el.textContent = '⚠ Not set'; el.style.color = 'var(--accent2)'; }
+}
+
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+checkKey();
 </script>
 </body>
 </html>
