@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>eBay Research Portal</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Syne:wght@400;600;800&display=swap');
+
+:root {
+  --bg: #0d0d12;
+  --surface: #16161f;
+  --surface2: #1e1e2a;
+  --border: #2c2c3e;
+  --accent: #7c6fff;
+  --accent2: #ff7043;
+  --green: #00e676;
+  --yellow: #ffd740;
+  --text: #e8e8f0;
+  --muted: #6b6b85;
+  --font: 'Syne', sans-serif;
+  --mono: 'JetBrains Mono', monospace;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* NAV */
+nav {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 0 24px;
+}
+
+.logo {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--accent);
+  padding: 14px 0;
+  margin-right: 32px;
+  letter-spacing: -0.3px;
+}
+
+.nav-tab {
+  padding: 14px 16px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.15s;
+  user-select: none;
+}
+.nav-tab:hover { color: var(--text); }
+.nav-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+/* VIEWS */
+.view { display: none; flex: 1; }
+.view.active { display: flex; flex-direction: column; }
+
+/* RESEARCH VIEW */
+.research-layout {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  min-height: calc(100vh - 49px);
+}
+
+.sidebar {
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.sidebar h2 {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--muted);
+}
+
+textarea {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 12px;
+  resize: vertical;
+  min-height: 180px;
+  width: 100%;
+  outline: none;
+  line-height: 1.6;
+}
+textarea:focus { border-color: var(--accent); }
+
+.parsed-preview {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  color: var(--muted);
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+.parsed-preview .item-chip {
+  display: inline-block;
+  background: rgba(124,111,255,0.12);
+  color: var(--accent);
+  border-radius: 4px;
+  padding: 1px 6px;
+  margin: 2px 3px 2px 0;
+}
+
+.parsed-preview .item-chip.noted {
+  background: rgba(255,112,67,0.12);
+  color: var(--accent2);
+}
+
+select, input[type="text"] {
+  font-family: var(--font);
+  font-size: 0.8rem;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 8px 12px;
+  width: 100%;
+  outline: none;
+}
+select:focus, input[type="text"]:focus { border-color: var(--accent); }
+
+label {
+  font-size: 0.75rem;
+  color: var(--muted);
+  font-weight: 600;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.btn {
+  font-family: var(--font);
+  font-weight: 700;
+  font-size: 0.83rem;
+  padding: 10px 18px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+  width: 100%;
+}
+
+.btn-run { background: var(--accent); color: #fff; }
+.btn-run:hover { background: #6a5ef0; }
+.btn-run:disabled { background: var(--border); color: var(--muted); cursor: not-allowed; }
+
+.btn-stop { background: rgba(255,112,67,0.15); color: var(--accent2); border: 1px solid rgba(255,112,67,0.3); }
+.btn-stop:hover { background: rgba(255,112,67,0.25); }
+.btn-stop:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.btn-export { background: rgba(0,230,118,0.12); color: var(--green); border: 1px solid rgba(0,230,118,0.25); }
+.btn-export:hover { background: rgba(0,230,118,0.2); }
+.btn-export:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.btn-small {
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  padding: 3px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  transition: all 0.12s;
+  white-space: nowrap;
+}
+.btn-small:hover { color: var(--text); border-color: var(--muted); }
+.btn-small.green { color: var(--green); border-color: rgba(0,230,118,0.3); }
+.btn-small.green:hover { background: rgba(0,230,118,0.08); }
+
+.progress-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.progress-bar {
+  flex: 1;
+  height: 3px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--green));
+  border-radius: 2px;
+  transition: width 0.4s;
+}
+
+.progress-text {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* MAIN TABLE AREA */
+.main-area {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.main-toolbar {
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--surface);
+}
+
+.status-pill {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  padding: 3px 10px;
+  border-radius: 20px;
+  background: var(--surface2);
+  color: var(--muted);
+}
+.status-pill.running { background: rgba(124,111,255,0.12); color: var(--accent); }
+.status-pill.done { background: rgba(0,230,118,0.1); color: var(--green); }
+
+.stat-chips {
+  display: flex;
+  gap: 16px;
+  margin-left: auto;
+}
+
+.stat-chip {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  color: var(--muted);
+}
+.stat-chip b { color: var(--text); }
+
+.table-container {
+  flex: 1;
+  overflow: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+}
+
+thead tr {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--surface2);
+}
+
+th {
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--muted);
+  padding: 9px 14px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+td {
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(44,44,62,0.5);
+  vertical-align: top;
+}
+
+tr:hover td { background: rgba(255,255,255,0.015); }
+
+.asin-mono {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  color: var(--accent);
+}
+
+.badge {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 4px;
+}
+.badge-pending { background: rgba(107,107,133,0.15); color: var(--muted); }
+.badge-run { background: rgba(124,111,255,0.12); color: var(--accent); }
+.badge-done { background: rgba(0,230,118,0.1); color: var(--green); }
+.badge-err { background: rgba(255,112,67,0.12); color: var(--accent2); }
+
+.spinner {
+  display: inline-block;
+  width: 8px; height: 8px;
+  border: 1.5px solid rgba(124,111,255,0.3);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  vertical-align: middle;
+  margin-right: 4px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.price-val {
+  font-family: var(--mono);
+  font-weight: 600;
+  color: var(--green);
+  font-size: 0.88rem;
+}
+.price-note {
+  font-size: 0.62rem;
+  color: var(--muted);
+  margin-top: 1px;
+}
+
+.title-text {
+  font-size: 0.76rem;
+  line-height: 1.4;
+  max-width: 200px;
+}
+.char-count {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  margin-top: 2px;
+}
+
+.desc-text {
+  font-size: 0.73rem;
+  color: #b0b0c8;
+  line-height: 1.5;
+  max-width: 280px;
+}
+
+.note-tag {
+  display: inline-block;
+  background: rgba(255,112,67,0.12);
+  color: var(--accent2);
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+/* HISTORY VIEW */
+.history-view {
+  padding: 28px;
+}
+.history-view h2 {
+  font-size: 1.1rem;
+  font-weight: 800;
+  margin-bottom: 6px;
+}
+.history-view .sub {
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin-bottom: 24px;
+}
+
+.session-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px 20px;
+  margin-bottom: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.session-card:hover { border-color: var(--accent); background: rgba(124,111,255,0.04); }
+.session-card .session-date {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.session-card .session-count {
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+.session-card .session-avg {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: var(--green);
+  margin-left: auto;
+}
+.session-card .session-del {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  color: var(--muted);
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  background: none;
+}
+.session-card .session-del:hover { color: var(--accent2); border-color: var(--accent2); }
+
+.empty-state {
+  text-align: center;
+  padding: 64px 20px;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+/* DIVIDER */
+.divider { border: none; border-top: 1px solid var(--border); margin: 0; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">⚡ ResearchPortal</div>
+  <div class="nav-tab active" id="tab-research" onclick="switchTab('research')">New Research</div>
+  <div class="nav-tab" id="tab-history" onclick="switchTab('history')">History</div>
+</nav>
+
+<!-- RESEARCH VIEW -->
+<div class="view active" id="view-research">
+  <div class="research-layout">
+
+    <div class="sidebar">
+      <h2>Paste ASINs / EANs</h2>
+      <div>
+        <label>Items — one per line, optional note after space</label>
+        <textarea id="asinInput" placeholder="B0B5FFXDLJ&#10;B07KXGPQRP LOCKED&#10;B01KUJ1VMG NO PADS&#10;5051892062817&#10;..."></textarea>
+      </div>
+
+      <div>
+        <label>Condition</label>
+        <select id="conditionSelect">
+          <option value="New">New</option>
+          <option value="Used - Like New">Used – Like New</option>
+          <option value="Used - Good">Used – Good</option>
+          <option value="Used - Acceptable">Used – Acceptable</option>
+          <option value="For Parts">For Parts / Not Working</option>
+        </select>
+      </div>
+
+      <div>
+        <label>Session name (optional)</label>
+        <input type="text" id="sessionName" placeholder="e.g. Amazon returns batch 3">
+      </div>
+
+      <div id="parsedPreview" class="parsed-preview" style="display:none"></div>
+
+      <button class="btn btn-run" id="runBtn" onclick="startResearch()">▶ Run Research</button>
+      <button class="btn btn-stop" id="stopBtn" onclick="togglePause()" disabled>⏸ Pause</button>
+      <button class="btn btn-export" id="exportBtn" onclick="exportCSV()" disabled>↓ Export CSV</button>
+
+      <div class="progress-row">
+        <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+        <div class="progress-text" id="progressText">0 / 0</div>
+      </div>
+    </div>
+
+    <div class="main-area">
+      <div class="main-toolbar">
+        <span class="status-pill" id="statusPill">Idle</span>
+        <span id="currentItem" style="font-size:0.78rem;color:var(--muted)"></span>
+        <div class="stat-chips" id="statChips" style="display:none">
+          <span class="stat-chip">Done: <b id="sDone">0</b></span>
+          <span class="stat-chip">Errors: <b id="sErr">0</b></span>
+          <span class="stat-chip">Avg: <b id="sAvg">—</b></span>
+        </div>
+      </div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>ASIN / EAN</th>
+              <th>Status</th>
+              <th>eBay Title (≤80)</th>
+              <th>Amazon BB</th>
+              <th>eBay Sold</th>
+              <th>Suggest £</th>
+              <th>Description</th>
+              <th>Note</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody">
+            <tr>
+              <td colspan="9" style="text-align:center;padding:48px;color:var(--muted);font-size:0.82rem">
+                Paste your ASINs or EANs in the panel and click Run Research
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- HISTORY VIEW -->
+<div class="view" id="view-history">
+  <div class="history-view">
+    <h2>Research History</h2>
+    <p class="sub">All past sessions saved in this browser</p>
+    <div id="historyList"></div>
+  </div>
+</div>
+
+<script>
+let items = [];
+let results = {};
+let paused = false;
+let running = false;
+let stopped = false;
+let currentIdx = 0;
+let currentSessionId = null;
+
+function switchTab(tab) {
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  document.getElementById('view-' + tab).classList.add('active');
+  if (tab === 'history') renderHistory();
+}
+
+// Parse input
+document.getElementById('asinInput').addEventListener('input', parseInput);
+
+function parseInput() {
+  const raw = document.getElementById('asinInput').value.trim();
+  if (!raw) { document.getElementById('parsedPreview').style.display = 'none'; return; }
+  const lines = raw.split('\n').map(l => l.trim()).filter(Boolean);
+  items = lines.map(line => {
+    const parts = line.split(/\s+/);
+    const id = parts[0];
+    const note = parts.slice(1).join(' ');
+    return { id, note };
+  });
+  const preview = document.getElementById('parsedPreview');
+  preview.style.display = 'block';
+  preview.innerHTML = `<span style="color:var(--muted);font-size:0.65rem">${items.length} items parsed:</span><br>` +
+    items.map(it => `<span class="item-chip${it.note ? ' noted' : ''}">${it.id}${it.note ? ' ★' : ''}</span>`).join('');
+}
+
+function buildTable() {
+  const tbody = document.getElementById('tableBody');
+  tbody.innerHTML = '';
+  items.forEach((item, i) => {
+    const tr = document.createElement('tr');
+    tr.id = 'row-' + i;
+    tr.innerHTML = `
+      <td style="color:var(--muted);font-family:var(--mono);font-size:0.65rem">${i+1}</td>
+      <td><span class="asin-mono">${item.id}</span></td>
+      <td><span class="badge badge-pending" id="badge-${i}">PENDING</span></td>
+      <td id="title-${i}" style="color:var(--muted);font-size:0.72rem">—</td>
+      <td id="amz-${i}">—</td>
+      <td id="ebay-${i}">—</td>
+      <td id="suggest-${i}">—</td>
+      <td id="desc-${i}" style="color:var(--muted);font-size:0.72rem">—</td>
+      <td id="note-${i}">${item.note ? `<span class="note-tag">${item.note}</span>` : '<span style="color:var(--muted)">—</span>'}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+async function startResearch() {
+  parseInput();
+  if (!items.length) { alert('Paste some ASINs first!'); return; }
+
+  results = {};
+  paused = false;
+  stopped = false;
+  running = true;
+  currentIdx = 0;
+  currentSessionId = Date.now().toString();
+
+  const condition = document.getElementById('conditionSelect').value;
+
+  document.getElementById('runBtn').disabled = true;
+  document.getElementById('stopBtn').disabled = false;
+  document.getElementById('exportBtn').disabled = true;
+  document.getElementById('statChips').style.display = 'flex';
+
+  const pill = document.getElementById('statusPill');
+  pill.className = 'status-pill running';
+  pill.textContent = 'Running…';
+
+  buildTable();
+
+  for (let i = 0; i < items.length; i++) {
+    if (stopped) break;
+    while (paused) await sleep(300);
+    currentIdx = i;
+    document.getElementById('currentItem').textContent = `Processing ${items[i].id} (${i+1}/${items.length})`;
+    document.getElementById('progressText').textContent = `${i} / ${items.length}`;
+    document.getElementById('progressFill').style.width = Math.round((i / items.length) * 100) + '%';
+    await researchItem(items[i], i, condition);
+    updateStats();
+    await sleep(600);
+  }
+
+  running = false;
+  document.getElementById('runBtn').disabled = false;
+  document.getElementById('stopBtn').disabled = true;
+  document.getElementById('exportBtn').disabled = false;
+  document.getElementById('progressFill').style.width = '100%';
+  document.getElementById('progressText').textContent = `${items.length} / ${items.length}`;
+  document.getElementById('currentItem').textContent = '';
+  pill.className = 'status-pill done';
+  pill.textContent = stopped ? 'Stopped' : 'Done';
+
+  saveSession();
+}
+
+async function researchItem(item, index, condition) {
+  const badge = document.getElementById('badge-' + index);
+  badge.className = 'badge badge-run';
+  badge.innerHTML = '<span class="spinner"></span>LIVE';
+
+  const conditionNote = condition !== 'New' ? `Condition: ${condition}. Note this in the description and adjust pricing accordingly.` : 'Condition: New.';
+
+  const prompt = `You are a UK eBay reseller. Research this product: ${item.id} (this may be an Amazon ASIN or EAN barcode).
+
+${conditionNote}
+Special notes: ${item.note || 'none'}
+
+Tasks:
+1. Search Amazon.co.uk for this product — find the current buy box price
+2. Search eBay.co.uk SOLD listings for this product
+3. Based on real prices, suggest a GBP sell price that would sell within 1-2 weeks on eBay UK
+4. Write an eBay title — MAXIMUM 80 characters, keyword-rich, natural case, include brand/model/key spec
+5. Write a detailed eBay description (3-5 sentences covering key features, what's in the box, condition)
+
+Return ONLY valid JSON, no markdown:
+{
+  "productName": "full product name",
+  "amazonPrice": "£XX.XX",
+  "amazonNote": "e.g. lowest new / buy box",
+  "ebaySoldLow": "£XX.XX",
+  "ebaySoldHigh": "£XX.XX",
+  "ebayNote": "brief note on comps",
+  "suggestPrice": "XX.XX",
+  "rationale": "one sentence why",
+  "title": "eBay title max 80 chars",
+  "description": "full eBay listing description"
+}`;
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        tools: [{ type: 'web_search_20250305', name: 'web_search' }],
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    const data = await resp.json();
+    const text = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
+    const match = text.replace(/```json|```/g, '').trim().match(/\{[\s\S]*\}/);
+    const parsed = JSON.parse(match ? match[0] : text);
+
+    results[item.id] = { status: 'done', ...parsed };
+    renderRow(index, parsed, item);
+    badge.className = 'badge badge-done';
+    badge.textContent = 'DONE';
+
+  } catch(e) {
+    results[item.id] = { status: 'error', error: e.message };
+    badge.className = 'badge badge-err';
+    badge.textContent = 'ERROR';
+  }
+}
+
+function renderRow(i, d, item) {
+  const title = d.title || '';
+  const chars = title.length;
+  const cc = chars > 80 ? '#ff5252' : chars > 70 ? var_yellow() : '#00e676';
+
+  document.getElementById('title-' + i).innerHTML =
+    `<div class="title-text">${escH(title)}</div>
+     <div class="char-count" style="color:${cc}">${chars}/80</div>
+     <button class="btn-small green" style="margin-top:4px" onclick="copy('${escA(title)}')">copy</button>`;
+
+  document.getElementById('amz-' + i).innerHTML =
+    `<div class="price-val">${escH(d.amazonPrice||'—')}</div>
+     <div class="price-note">${escH(d.amazonNote||'')}</div>`;
+
+  document.getElementById('ebay-' + i).innerHTML =
+    `<div class="price-val" style="font-size:0.75rem">${escH(d.ebaySoldLow||'—')} – ${escH(d.ebaySoldHigh||'—')}</div>
+     <div class="price-note">${escH(d.ebayNote||'')}</div>`;
+
+  const sp = d.suggestPrice ? '£' + parseFloat(d.suggestPrice).toFixed(2) : '—';
+  document.getElementById('suggest-' + i).innerHTML =
+    `<div class="price-val" style="font-size:1.1rem">${sp}</div>
+     <div class="price-note" style="max-width:110px">${escH(d.rationale||'')}</div>`;
+
+  document.getElementById('desc-' + i).innerHTML =
+    `<div class="desc-text">${escH(d.description||'—')}</div>
+     <button class="btn-small green" style="margin-top:4px" onclick="copy('${escA(d.description||'')}')">copy</button>`;
+}
+
+function var_yellow() { return '#ffd740'; }
+
+function escH(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function escA(s) { return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\n/g,' '); }
+function copy(t) { navigator.clipboard.writeText(t); }
+
+function togglePause() {
+  if (!running) return;
+  paused = !paused;
+  const btn = document.getElementById('stopBtn');
+  btn.textContent = paused ? '▶ Resume' : '⏸ Pause';
+  document.getElementById('statusPill').textContent = paused ? 'Paused' : 'Running…';
+}
+
+function updateStats() {
+  const vals = Object.values(results);
+  const done = vals.filter(r => r.status === 'done').length;
+  const errs = vals.filter(r => r.status === 'error').length;
+  const prices = vals.filter(r => r.suggestPrice).map(r => parseFloat(r.suggestPrice));
+  const avg = prices.length ? '£' + (prices.reduce((a,b)=>a+b,0)/prices.length).toFixed(2) : '—';
+  document.getElementById('sDone').textContent = done;
+  document.getElementById('sErr').textContent = errs;
+  document.getElementById('sAvg').textContent = avg;
+}
+
+function saveSession() {
+  const sessions = JSON.parse(localStorage.getItem('rp_sessions') || '[]');
+  const name = document.getElementById('sessionName').value.trim() || ('Session ' + new Date().toLocaleDateString('en-GB'));
+  sessions.unshift({
+    id: currentSessionId,
+    name,
+    date: new Date().toISOString(),
+    items: items.map(it => ({ ...it, result: results[it.id] || null }))
+  });
+  localStorage.setItem('rp_sessions', JSON.stringify(sessions.slice(0, 50)));
+}
+
+function renderHistory() {
+  const sessions = JSON.parse(localStorage.getItem('rp_sessions') || '[]');
+  const list = document.getElementById('historyList');
+  if (!sessions.length) {
+    list.innerHTML = '<div class="empty-state">No sessions yet — run a research batch first</div>';
+    return;
+  }
+  list.innerHTML = sessions.map((s, idx) => {
+    const done = s.items.filter(it => it.result && it.result.status === 'done').length;
+    const prices = s.items.filter(it => it.result && it.result.suggestPrice).map(it => parseFloat(it.result.suggestPrice));
+    const avg = prices.length ? '£' + (prices.reduce((a,b)=>a+b,0)/prices.length).toFixed(2) : '—';
+    const d = new Date(s.date);
+    return `<div class="session-card" onclick="loadSession(${idx})">
+      <div>
+        <div class="session-count">${s.name}</div>
+        <div class="session-date">${d.toLocaleDateString('en-GB', {day:'numeric',month:'short',year:'numeric'})} · ${done}/${s.items.length} done</div>
+      </div>
+      <div class="session-avg">avg ${avg}</div>
+      <button class="session-del" onclick="event.stopPropagation();deleteSession(${idx})">✕ Delete</button>
+    </div>`;
+  }).join('');
+}
+
+function loadSession(idx) {
+  const sessions = JSON.parse(localStorage.getItem('rp_sessions') || '[]');
+  const s = sessions[idx];
+  if (!s) return;
+  items = s.items.map(it => ({ id: it.id, note: it.note }));
+  results = {};
+  s.items.forEach(it => { if (it.result) results[it.id] = it.result; });
+  document.getElementById('asinInput').value = items.map(it => it.id + (it.note ? ' ' + it.note : '')).join('\n');
+  document.getElementById('sessionName').value = s.name;
+  parseInput();
+  buildTable();
+  items.forEach((item, i) => {
+    const r = results[item.id];
+    if (r && r.status === 'done') {
+      renderRow(i, r, item);
+      const badge = document.getElementById('badge-' + i);
+      badge.className = 'badge badge-done';
+      badge.textContent = 'DONE';
+    } else if (r && r.status === 'error') {
+      const badge = document.getElementById('badge-' + i);
+      badge.className = 'badge badge-err';
+      badge.textContent = 'ERROR';
+    }
+  });
+  updateStats();
+  document.getElementById('statChips').style.display = 'flex';
+  document.getElementById('exportBtn').disabled = false;
+  switchTab('research');
+}
+
+function deleteSession(idx) {
+  const sessions = JSON.parse(localStorage.getItem('rp_sessions') || '[]');
+  sessions.splice(idx, 1);
+  localStorage.setItem('rp_sessions', JSON.stringify(sessions));
+  renderHistory();
+}
+
+function exportCSV() {
+  const headers = ['#','ID','Product','Title','Chars','Amazon BB','eBay Low','eBay High','Suggest £','Rationale','Description','Notes'];
+  const rows = items.map((item, i) => {
+    const r = results[item.id] || {};
+    return [
+      i+1, item.id,
+      r.productName||'', r.title||'', (r.title||'').length,
+      r.amazonPrice||'', r.ebaySoldLow||'', r.ebaySoldHigh||'',
+      r.suggestPrice ? '£'+parseFloat(r.suggestPrice).toFixed(2) : '',
+      r.rationale||'', (r.description||'').replace(/"/g,'""'), item.note||''
+    ].map(v => `"${v}"`).join(',');
+  });
+  const csv = [headers.map(h=>`"${h}"`).join(','), ...rows].join('\n');
+  const a = Object.assign(document.createElement('a'), {
+    href: URL.createObjectURL(new Blob([csv], {type:'text/csv'})),
+    download: (document.getElementById('sessionName').value.trim() || 'research') + '.csv'
+  });
+  a.click();
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+</script>
+</body>
+</html>
