@@ -662,7 +662,7 @@ async function researchItem(item, index, condition) {
 
   const conditionNote = condition !== 'New' ? condition : 'New';
 
-  const prompt = 'ASIN:' + item.id + ' Condition:' + conditionNote + ' Notes:' + (item.note||'none') + '. You are a UK eBay pricing expert. For this Amazon ASIN, provide your best estimate of UK market prices. Reply ONLY with compact JSON, no spaces, no markdown: {"productName":"name","amazonPrice":"£X.XX","amazonNote":"note","ebaySoldLow":"£X.XX","ebaySoldHigh":"£X.XX","ebayNote":"note","suggestPrice":"X.XX","rationale":"reason","title":"ebay title max 80 chars","description":"3 sentence description"}';
+  const prompt = 'Search amazon.co.uk/dp/' + item.id + ' for the product name and price. Then search ebay.co.uk sold listings for that product. Condition:' + conditionNote + ' Notes:' + (item.note||'none') + '. Reply ONLY in this compact JSON: {"productName":"name","amazonPrice":"£X.XX","amazonNote":"note","ebaySoldLow":"£X.XX","ebaySoldHigh":"£X.XX","ebayNote":"note","suggestPrice":"X.XX","rationale":"reason","title":"ebay title max 80 chars","description":"3 sentences"}';
 
     const apiKey = localStorage.getItem('rp_apikey');
   if (!apiKey) {
@@ -685,6 +685,7 @@ async function researchItem(item, index, condition) {
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
         max_tokens: 800,
+        tools: [{ type: 'web_search_20250305', name: 'web_search' }],
         messages: [{ role: 'user', content: prompt }]
       })
     });
