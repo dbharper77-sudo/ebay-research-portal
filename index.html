@@ -458,10 +458,16 @@ tr:hover td { background: rgba(255,255,255,0.015); }
   <div class="research-layout">
 
     <div class="sidebar">
-      <h2>Paste ASINs / EANs</h2>
+      <h2>Import from SellerAmp</h2>
       <div>
-        <label>Items — one per line, optional note after space</label>
-        <textarea id="asinInput" placeholder="B0B5FFXDLJ&#10;B07KXGPQRP LOCKED&#10;B01KUJ1VMG NO PADS&#10;5051892062817&#10;..."></textarea>
+        <label>Google Sheet URL (from SellerAmp export)</label>
+        <input type="text" id="sheetUrl" placeholder="https://docs.google.com/spreadsheets/d/..." style="font-size:0.72rem">
+        <button class="btn-small green" style="margin-top:6px;width:100%;padding:6px" onclick="loadSheet()">Load Sheet</button>
+      </div>
+      <div style="text-align:center;color:var(--muted);font-size:0.7rem;margin:4px 0">— or —</div>
+      <div>
+        <label>Paste ASINs manually (one per line, note after space)</label>
+        <textarea id="asinInput" placeholder="B0B5FFXDLJ&#10;B07KXGPQRP LOCKED&#10;B01KUJ1VMG NO PADS&#10;..."></textarea>
       </div>
 
       <div>
@@ -569,6 +575,78 @@ function switchTab(tab) {
 // Parse input
 document.getElementById('asinInput').addEventListener('input', parseInput);
 
+async function loadSheet() {
+  const url = document.getElementById('sheetUrl').value.trim();
+  if (!url) { alert('Paste a Google Sheet URL first'); return; }
+  
+  // Extract sheet ID
+  const match = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+  if (!match) { alert('Invalid Google Sheet URL'); return; }
+  const sheetId = match[1];
+  
+  const btn = document.querySelector('[onclick="loadSheet()"]');
+  btn.textContent = 'Loading...';
+  btn.disabled = true;
+  
+  try {
+    const csvUrl = 'https://docs.google.com/spreadsheets/d/' + sheetId + '/export?format=csv&gid=0';
+    const resp = await fetch(csvUrl);
+    if (!resp.ok) throw new Error('Could not fetch sheet - make sure it is set to Anyone with link can view');
+    const text = await resp.text();
+    
+    // Parse CSV
+    const lines = text.trim().split('\n');
+    const headers = lines[0].split(',').map(h => h.replace(/"/g,'').trim().toUpperCase());
+    
+    const asinIdx = headers.indexOf('ASIN');
+    const titleIdx = headers.indexOf('TITLE');
+    const eanIdx = headers.indexOf('EAN');
+    
+    if (asinIdx === -1) throw new Error('No ASIN column found in sheet');
+    
+    // Build items with title as note for accurate lookup
+    const rows = lines.slice(1).filter(l => l.trim());
+    const asinLines = [];
+    sheetData = {};
+    
+    rows.forEach(row => {
+      const cols = parseCSVRow(row);
+      const asin = (cols[asinIdx] || '').replace(/"/g,'').trim();
+      const title = titleIdx >= 0 ? (cols[titleIdx] || '').replace(/"/g,'').trim() : '';
+      const ean = eanIdx >= 0 ? (cols[eanIdx] || '').replace(/"/g,'').trim() : '';
+      if (asin) {
+        sheetData[asin] = { title, ean };
+        asinLines.push(asin);
+      }
+    });
+    
+    document.getElementById('asinInput').value = asinLines.join('\n');
+    parseInput();
+    btn.textContent = asinLines.length + ' items loaded!';
+    setTimeout(() => { btn.textContent = 'Load Sheet'; btn.disabled = false; }, 2000);
+    
+  } catch(e) {
+    alert('Error: ' + e.message);
+    btn.textContent = 'Load Sheet';
+    btn.disabled = false;
+  }
+}
+
+function parseCSVRow(row) {
+  const result = [];
+  let current = '';
+  let inQuotes = false;
+  for (let i = 0; i < row.length; i++) {
+    if (row[i] === '"') { inQuotes = !inQuotes; }
+    else if (row[i] === ',' && !inQuotes) { result.push(current); current = ''; }
+    else { current += row[i]; }
+  }
+  result.push(current);
+  return result;
+}
+
+let sheetData = {};
+
 function parseInput() {
   const raw = document.getElementById('asinInput').value.trim();
   if (!raw) { document.getElementById('parsedPreview').style.display = 'none'; return; }
@@ -662,7 +740,9 @@ async function researchItem(item, index, condition) {
 
   const conditionNote = condition !== 'New' ? condition : 'New';
 
-  const prompt = 'Search amazon.co.uk/dp/' + item.id + ' for the product name and price. Then search ebay.co.uk sold listings for that product. Condition:' + conditionNote + ' Notes:' + (item.note||'none') + '. Reply ONLY in this compact JSON: {"productName":"name","amazonPrice":"£X.XX","amazonNote":"note","ebaySoldLow":"£X.XX","ebaySoldHigh":"£X.XX","ebayNote":"note","suggestPrice":"X.XX","rationale":"reason","title":"ebay title max 80 chars","description":"3 sentences"}';
+  const sd = sheetData[item.id] || {};
+  const productHint = sd.title ? 'Product name: ' + sd.title + '. EAN: ' + (sd.ean||'unknown') + '.' : 'Look up amazon.co.uk/dp/' + item.id + ' to find the product name.';
+  const prompt = 'UK eBay reseller task. ASIN:' + item.id + '. ' + productHint + ' Condition:' + conditionNote + '. Notes:' + (item.note||'none') + '. Search eBay.co.uk sold listings for this exact product to find recent sold prices. Reply ONLY in compact JSON no markdown: {"productName":"name","amazonPrice":"£X.XX","amazonNote":"note","ebaySoldLow":"£X.XX","ebaySoldHigh":"£X.XX","ebayNote":"note","suggestPrice":"X.XX","rationale":"reason","title":"ebay title max 80 chars","description":"3 sentences"}';
 
     const apiKey = localStorage.getItem('rp_apikey');
   if (!apiKey) {
