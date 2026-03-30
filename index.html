@@ -639,7 +639,7 @@ async function startResearch() {
     document.getElementById('progressFill').style.width = Math.round((i / items.length) * 100) + '%';
     await researchItem(items[i], i, condition);
     updateStats();
-    await sleep(600);
+    await sleep(3000);
   }
 
   running = false;
