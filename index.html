@@ -660,35 +660,11 @@ async function researchItem(item, index, condition) {
   badge.className = 'badge badge-run';
   badge.innerHTML = '<span class="spinner"></span>LIVE';
 
-  const conditionNote = condition !== 'New' ? `Condition: ${condition}. Note this in the description and adjust pricing accordingly.` : 'Condition: New.';
+  const conditionNote = condition !== 'New' ? condition : 'New';
 
-  const prompt = `You are a UK eBay reseller. Research this product: ${item.id} (this may be an Amazon ASIN or EAN barcode).
+  const prompt = 'UK eBay reseller task. Product ASIN/EAN: ' + item.id + '. Condition: ' + conditionNote + '. Notes: ' + (item.note || 'none') + '. Based on your knowledge of UK Amazon and eBay prices, return ONLY a JSON object with these exact keys, no markdown, no explanation: {"productName":"string","amazonPrice":"£X.XX","amazonNote":"string","ebaySoldLow":"£X.XX","ebaySoldHigh":"£X.XX","ebayNote":"string","suggestPrice":"X.XX","rationale":"string","title":"eBay title under 80 chars with brand model key specs","description":"3 sentence eBay listing description"}';
 
-${conditionNote}
-Special notes: ${item.note || 'none'}
-
-Tasks:
-1. Search Amazon.co.uk for this product — find the current buy box price
-2. Search eBay.co.uk SOLD listings for this product
-3. Based on real prices, suggest a GBP sell price that would sell within 1-2 weeks on eBay UK
-4. Write an eBay title — MAXIMUM 80 characters, keyword-rich, natural case, include brand/model/key spec
-5. Write a detailed eBay description (3-5 sentences covering key features, what's in the box, condition)
-
-Return ONLY valid JSON, no markdown:
-{
-  "productName": "full product name",
-  "amazonPrice": "£XX.XX",
-  "amazonNote": "e.g. lowest new / buy box",
-  "ebaySoldLow": "£XX.XX",
-  "ebaySoldHigh": "£XX.XX",
-  "ebayNote": "brief note on comps",
-  "suggestPrice": "XX.XX",
-  "rationale": "one sentence why",
-  "title": "eBay title max 80 chars",
-  "description": "full eBay listing description"
-}`;
-
-  const apiKey = localStorage.getItem('rp_apikey');
+    const apiKey = localStorage.getItem('rp_apikey');
   if (!apiKey) {
     results[item.id] = { status: 'error', error: 'No API key' };
     const badge2 = document.getElementById('badge-' + index);
@@ -708,7 +684,7 @@ Return ONLY valid JSON, no markdown:
       },
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
-        max_tokens: 1000,
+        max_tokens: 800,
 
         messages: [{ role: 'user', content: prompt }]
       })
